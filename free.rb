@@ -59,6 +59,6 @@ end
 get "/:comic/:episode" do
   episode = params[:episode];
   link = find_comic_list_by_name(params[:comic]).find do |episode|
-    episode[:url] =~ "v=#{episode}"
+    episode[:url] =~ /v=#{episode}/
   end
 end
