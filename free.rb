@@ -57,10 +57,10 @@ get "/episode" do
 end
 
 get "/:comic/:episode" do
-  episode = params[:episode];
+  episode_id = params[:episode]
   
   link = find_comic_list_by_name(params[:comic]).select do |episode|
-    suffix = "/#{episode}.js"
+    suffix = "/#{episode_id}.js"
     episode[:url][-suffix.length, suffix.length] == suffix    
   end.first
   
