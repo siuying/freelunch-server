@@ -58,7 +58,10 @@ end
 
 get "/:comic/:episode" do
   episode = params[:episode];
-  link = find_comic_list_by_name(params[:comic]).find do |episode|
-    episode[:url] =~ /v=#{episode}/
-  end
+  
+  link = find_comic_list_by_name(params[:comic]).select do |episode|
+    episode[:url] =~ /\/#{episode}.js/
+  end.first
+  
+  find_episode_list(link[:url]).to_json
 end
