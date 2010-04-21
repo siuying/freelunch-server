@@ -58,11 +58,13 @@ end
 
 get "/:comic/:episode" do
   episode_id = params[:episode]
+  comic_id = params[:comic]
   
-  link = find_comic_list_by_name(params[:comic]).select do |episode|
+  list = find_comic_list_by_name(comic_id)
+  link = list.select do |episode|
     suffix = "/#{episode_id}.js"
     episode[:url][-suffix.length, suffix.length] == suffix    
   end.first
   
-  find_episode_list(link[:url]).to_json
+  {:comic => comic_id, :episode => episode_id, :pages => find_episode_list(link[:url])}.to_json
 end
