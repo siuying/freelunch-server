@@ -39,9 +39,10 @@ get '/' do
   "No free lunch!"
 end
 
-# use comic name to find comic list
-get "/comic" do
-  home = find_comic_home(params[:name])
+# use comic id to find episode list
+get "/:comic" do
+  comic_id = params[:comic]
+  home = find_comic_home(comic_id)
   doc = Hpricot(open(home).read)
   links = doc.search("ul.serialise_list li a").collect() do |anchor|
     {
@@ -51,11 +52,7 @@ get "/comic" do
   end.to_json
 end
 
-get "/episode" do
-  url = params[:url]
-  find_episode_list(url).to_json
-end
-
+# use comic id and episode id to find pages
 get "/:comic/:episode" do
   episode_id = params[:episode]
   comic_id = params[:comic]
