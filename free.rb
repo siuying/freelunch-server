@@ -121,10 +121,10 @@ get '/index.json' do
   doc = Hpricot(open(HOME_URL).read)
   latest, anime, top = doc.search("table.gray_link1")
   
-  latest_list = latest.search("td a img").each.collect do |thumb|
+  latest_list = latest.search("td a img").collect do |thumb|
     list_comic_episodes_by_thumbnail(thumb)
   end
-  
+    
   top_list = top.search("td a img").each.collect do |thumb|
     list_comic_episodes_by_thumbnail(thumb)
   end
