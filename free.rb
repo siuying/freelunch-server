@@ -13,31 +13,38 @@ helpers do
   end
   
   def find_comic_list(url)
-    matched = url.match(/^http:\/\/([^\/]+)\/AllComic\/Browser\.html\?c=([0-9]+)&v=([a-zA-Z0-9]+)/)
+    matched = url.match(/^http:\/\/([^\/]+)\/AllComic\/Browser\.html\?c=([0-9]+)/)
     if matched
       domain = matched[1]
-      comic_id = matched[2]
-      episode_id = matched[3]
+      comic_id = url.match(/c=([a-zA-Z0-9]+)/)[1] rescue nil
+      episode_id = url.match(/v=([a-zA-Z0-9]+)/)[1] rescue nil
+      topic_id = url.match(/t=([a-zA-Z0-9]+)/)[1] rescue nil
       
-      if episode_id =~ /^SP/
-        "http://#{domain}/Utility/#{comic_id}/SP/#{episode_id}.js"
+      if topic_id
+        "http://#{domain}/Utility/#{comic_id}/#{topic_id}/#{episode_id}.js"
+        
       else
         "http://#{domain}/Utility/#{comic_id}/#{episode_id}.js"
-      end
 
+      end
     else
       nil
     end
   end
   
-  def find_comic_list_by_name(name)
-    home_url = find_comic_home(name)
-    doc = Hpricot(open(home_url).read)
-    links = doc.search("ul.serialise_list li a").collect() do |anchor|
-      {
-        :name => anchor.innerText, 
-        :url => find_comic_list(anchor["href"])
-      }
+  def parse_comic_page_link(url)
+    domain = url.match(/http:\/\/([^\/]+)/)[1] rescue nil
+    comic_id = url.match(/c=([a-zA-Z0-9]+)/)[1] rescue nil
+    episode_id = url.match(/v=([a-zA-Z0-9]+)/)[1] rescue nil
+    topic_id =  url.match(/t=([a-zA-Z0-9]+)/)[1] rescue nil
+    [domain, comic_id, episode_id, topic_id]
+  end
+  
+  def generate_local_comic_page_link(domain, comic_id, episode_id, topic_id=nil)
+    if topic_id
+      "/pages/#{domain}/#{comic_id}/#{topic_id}/#{episode_id}.json"
+    else
+      "/pages/#{domain}/#{comic_id}/#{episode_id}.json"
     end
   end
   
@@ -47,17 +54,17 @@ helpers do
   end
 
   def list_comic_episodes_by_thumbnail(thumb)
-    name = thumb.search("../../../../tr[2]").inner_text.strip
-    episode_label = thumb.search("../../../../tr[3]").inner_text.strip
+    comic_title = thumb.search("../../../../tr[2]").inner_text.strip
+    episode_title = thumb.search("../../../../tr[3]").inner_text.strip
     thumbnail = thumb.search("../../../../tr[1]//img").attr("src")
     url = thumb.search("../../../../tr[2]//a").attr("href")
-    comic_id = url.match(/\/HTML\/(.+)\//)[1] rescue nil
+    comic_alias = url.match(/\/HTML\/(.+)\//)[1] rescue nil
     {
-      :name => name,
-      :comic_id => comic_id,
+      :comic_title => comic_title,
+      :comic_alias => comic_alias,
       :thumbnail => thumbnail,
-      :episode_label => episode_label,
-      :url => "/#{comic_id}.json"
+      :episode_title => episode_title,
+      :url => "/#{comic_alias}.json"
     }
   end
   
@@ -71,7 +78,19 @@ helpers do
     page_index = options[:page_index] || "1"    # page 1
     topic_index = options[:topic_index] || "-1" # all topic
     "/catalog.json?pid=#{page_index}&tid=#{topic_index}"
-  end    
+  end
+  
+  def get_episode_pages(domain, comic_id, episode_id, topic_id=nil)
+    if topic_id
+      url = "http://#{domain}/Utility/#{comic_id}/#{topic_id}/#{episode_id}.js"
+      
+    else
+      url = "http://#{domain}/Utility/#{comic_id}/#{episode_id}.js"
+
+    end
+    
+    {:comic => comic_id, :episode => episode_id, :pages => find_episode_list(url)}
+  end
 end
 
 get '/' do
@@ -127,9 +146,9 @@ get "/version.json" do
 end
 
 # use comic id to find episode list
-get "/:comic.json" do
-  comic_id = params[:comic]
-  home = find_comic_home(comic_id)
+get "/:comic_alias.json" do
+  comic_alias = params[:comic_alias]
+  home = find_comic_home(comic_alias)
   
   puts "open url: #{home}"
   doc = Hpricot(open(home).read)
@@ -141,9 +160,13 @@ get "/:comic.json" do
   if lists.size > 0
     normal_list_links = lists.pop.search("li a").collect() do |anchor|
       comic_url = anchor["href"]
+      episode_label = anchor.inner_text.strip
+
+      comic_id, episode_id, topic_id = parse_comic_page_link(comic_url)
+      url = generate_local_comic_page_link(comic_id, episode_id, topic_id)
       {
-        :name => anchor.innerText, 
-        :url => find_comic_list(comic_url)
+        :episode_label => episode_label,
+        :url => url
       }
     end
   else
@@ -151,33 +174,46 @@ get "/:comic.json" do
   end
 
   # SP is not supported
-  # if lists.size > 0
-  #   sp_list_links = lists.pop.search("li a").collect() do |anchor|
-  #     comic_url = anchor["href"]
-  #     {
-  #       :name => anchor.innerText, 
-  #       :url => find_comic_list(comic_url)
-  #     }
-  #   end
-  # else
-  sp_list_links = []
-  # end
+  if lists.size > 0
+    sp_list_links = lists.pop.search("li a").collect() do |anchor|
+      comic_url = anchor["href"]
+      episode_label = anchor.inner_text.strip
+      comic_id, episode_id, topic_id = parse_comic_page_link(comic_url)
+      url = generate_local_comic_page_link(comic_id, episode_id, topic_id)
+      {
+        :episode_label => episode_label,
+        :url => url
+      }
+    end
+  else
+    sp_list_links = []
+  end
   
-  {:title => title, :cover => cover,
-    :sp => sp_list_links, :episodes => normal_list_links}.to_json
+  {
+   :comic_label => title, 
+   :cover => cover,
+   :episodes => normal_list_links,
+   :sp => sp_list_links
+  }.to_json
 end
 
 
 # use comic id and episode id to find pages
-get "/:comic/:episode.json" do
+get "/pages/:domain/:comic/:episode.json" do
+  domain = params[:domain]
   episode_id = params[:episode]
   comic_id = params[:comic]
-  
-  list = find_comic_list_by_name(comic_id)
-  link = list.select do |episode|
-    suffix = "/#{episode_id}.js"
-    episode[:url][-suffix.length, suffix.length] == suffix    
-  end.first
-  
-  {:comic => comic_id, :episode => episode_id, :pages => find_episode_list(link[:url])}.to_json
+  topic_id = params[:topic]
+
+  get_episode_pages(domain, comic_id, episode_id, topic_id).to_json
 end
+
+get "/pages/:domain/:comic/:topic/:episode.json" do
+  domain = params[:domain]
+  episode_id = params[:episode]
+  comic_id = params[:comic]
+  topic_id = params[:topic]
+
+  get_episode_pages(domain, comic_id, episode_id, topic_id).to_json
+end
+
