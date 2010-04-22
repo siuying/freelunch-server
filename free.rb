@@ -121,26 +121,40 @@ end
 get "/:comic.json" do
   comic_id = params[:comic]
   home = find_comic_home(comic_id)
+  
+  puts "open url: #{home}"
   doc = Hpricot(open(home).read)
-  sp_list, normal_list = doc.search("ul.serialise_list")
   
-  sp_list_links = sp_list.search("li a").collect() do |anchor|
-    comic_url = anchor["href"]
-    {
-      :name => anchor.innerText, 
-      :url => find_comic_list(comic_url)
-    }
+  cover = doc.search(".comic_cover img").attr("src") rescue nil
+  title = doc.search("b.F14PX").inner_text.strip rescue nil
+  lists = doc.search("ul.serialise_list") || []
+
+  if lists.size > 0
+    normal_list_links = lists.pop.search("li a").collect() do |anchor|
+      comic_url = anchor["href"]
+      {
+        :name => anchor.innerText, 
+        :url => find_comic_list(comic_url)
+      }
+    end
+  else
+    normal_list_links = []
   end
   
-  normal_list_links = normal_list.search("li a").collect() do |anchor|
-    comic_url = anchor["href"]
-    {
-      :name => anchor.innerText, 
-      :url => find_comic_list(comic_url)
-    }
+  if lists.size > 0
+    sp_list_links = lists.pop.search("li a").collect() do |anchor|
+      comic_url = anchor["href"]
+      {
+        :name => anchor.innerText, 
+        :url => find_comic_list(comic_url)
+      }
+    end
+  else
+    sp_list_links = []
   end
   
-  {:sp => sp_list_links, :normal => normal_list_links}.to_json
+  {:title => title, :cover => cover,
+    :sp => sp_list_links, :normal => normal_list_links}.to_json
 end
 
 
