@@ -47,16 +47,16 @@ helpers do
   end
 
   def list_comic_episodes_by_thumbnail(thumb)
-    comic_label = thumb.search("../../../../tr[2]").inner_text.strip
+    name = thumb.search("../../../../tr[2]").inner_text.strip
     episode_label = thumb.search("../../../../tr[3]").inner_text.strip
     thumbnail = thumb.search("../../../../tr[1]//img").attr("src")
     url = thumb.search("../../../../tr[2]//a").attr("href")
     comic_id = url.match(/\/HTML\/(.+)\//)[1] rescue nil
     {
-      :comic_label => comic_label,
-      :episode_label => episode_label,
-      :thumbnail => thumbnail,
+      :name => name,
       :comic_id => comic_id,
+      :thumbnail => thumbnail,
+      :episode_label => episode_label,
       :url => "/#{comic_id}.json"
     }
   end
@@ -106,7 +106,12 @@ get "/catalog.json" do
     url = detail.search("a").attr("href")  
     comic_id = url.match(/\/HTML\/(.+)\//)[1] rescue nil
 
-    {:name => name, :comic_id => comic_id, :thumbnail => thumbnail_url, :url => "/#{comic_id}.json"}
+    {
+      :name => name, 
+      :comic_id => comic_id, 
+      :thumbnail => thumbnail_url, 
+      :url => "/#{comic_id}.json"
+    }
   end
 
   current_page = doc.search(".pagebarCurrent").inner_text.to_i rescue 1
