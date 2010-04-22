@@ -65,10 +65,10 @@ helpers do
     url = thumb.search("../../../../tr[2]//a").attr("href")
     comic_alias = url.match(/\/HTML\/(.+)\//)[1] rescue nil
     {
-      :comic_title => comic_title,
+      :comic_name => comic_title,
       :comic_alias => comic_alias,
       :thumbnail => thumbnail,
-      :episode_title => episode_title,
+      :episode_name => episode_title,
       :url => "/#{comic_alias}.json"
     }
   end
@@ -97,16 +97,17 @@ helpers do
     johnson.evaluate(js)
 
     pages = johnson["picAy"].to_a
-    pageCount = johnson["picCount"]
-    nextVolume = johnson["nextVolume"]
-    preVolume = johnson["preVolume"]
+    page_count = johnson["picCount"]
+    next_volume = johnson["nextVolume"]
+    pre_volume = johnson["preVolume"]
+    comic_title = johnson["comicName"]
 
-    nextVolume = (nextVolume =~ /javascript/) ? nil : convert_comic_page(nextVolume)
-    preVolume = (preVolume =~ /javascript/) ? nil : convert_comic_page(preVolume)    
+    next_volume = (next_volume =~ /javascript/) ? nil : convert_comic_page(next_volume)
+    pre_volume = (pre_volume =~ /javascript/) ? nil : convert_comic_page(pre_volume)    
                 
     {
-      :comic => comic_id, :episode => episode_id, :pages => pages, 
-      :pageCount => pageCount, :preVolume => preVolume, :nextVolume => nextVolume
+      :comic_name => comic_title, :comic_id => comic_id, :episode_id => episode_id, :pages => pages, 
+      :page_count => page_count, :pre_volume => pre_volume, :next_volume => next_volume
     }
   end
 end
@@ -139,12 +140,12 @@ get "/catalog.json" do
     thumbnail, detail = comic_block.search("li")
 
     thumbnail_url = thumbnail.search("img").attr("src")    
-    name = detail.search(".F14PX").inner_text.strip
+    comic_title = detail.search(".F14PX").inner_text.strip
     url = detail.search("a").attr("href")  
     comic_id = url.match(/\/HTML\/(.+)\//)[1] rescue nil
 
     {
-      :name => name, 
+      :comic_name => comic_title, 
       :comic_id => comic_id, 
       :thumbnail => thumbnail_url, 
       :url => "/#{comic_id}.json"
@@ -183,7 +184,7 @@ get "/:comic_alias.json" do
       comic_id, episode_id, topic_id = parse_comic_page_link(comic_url)
       url = generate_local_comic_page_link(comic_id, episode_id, topic_id)
       {
-        :episode_label => episode_label,
+        :episode_name => episode_label,
         :url => url
       }
     end
@@ -199,7 +200,7 @@ get "/:comic_alias.json" do
       comic_id, episode_id, topic_id = parse_comic_page_link(comic_url)
       url = generate_local_comic_page_link(comic_id, episode_id, topic_id)
       {
-        :episode_label => episode_label,
+        :episode_name => episode_label,
         :url => url
       }
     end
@@ -208,7 +209,7 @@ get "/:comic_alias.json" do
   end
   
   {
-   :comic_label => title, 
+   :comic_name => title, 
    :cover => cover,
    :episodes => normal_list_links,
    :sp => sp_list_links
