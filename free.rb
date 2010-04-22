@@ -12,14 +12,23 @@ helpers do
   end
   
   def find_comic_list(url)
-    matched = url.match(/^http:\/\/([^\/]+)\/AllComic\/Browser\.html\?c=([0-9]+)&v=([0-9]+)/)
+    matched = url.match(/^http:\/\/([^\/]+)\/AllComic\/Browser\.html\?c=([0-9]+)&v=([a-zA-Z0-9]+)/)
     if matched
-      "http://#{matched[1]}/Utility/#{matched[2]}/#{matched[3]}.js"
+      domain = matched[1]
+      comic_id = matched[2]
+      episode_id = matched[3]
+      
+      if episode_id =~ /^SP/
+        "http://#{domain}/Utility/#{comic_id}/SP/#{episode_id}.js"
+      else
+        "http://#{domain}/Utility/#{comic_id}/#{episode_id}.js"
+      end
+
     else
       nil
     end
   end
-    
+  
   def find_comic_list_by_name(name)
     home_url = find_comic_home(name)
     doc = Hpricot(open(home_url).read)
@@ -41,12 +50,13 @@ helpers do
     episode_label = thumb.search("../../../../tr[3]").inner_text.strip
     thumbnail = thumb.search("../../../../tr[1]//img").attr("src")
     url = thumb.search("../../../../tr[2]//a").attr("href")
-
+    comic_id = url.match(/\/HTML\/(.+)\//)[1] rescue nil
     {
       :comic_label => comic_label,
       :episode_label => episode_label,
       :thumbnail => thumbnail,
-      :url => url
+      :comic_id => comic_id,
+      :url => "/#{comic_id}.json"
     }
   end
 end
@@ -75,12 +85,25 @@ get "/:comic.json" do
   comic_id = params[:comic]
   home = find_comic_home(comic_id)
   doc = Hpricot(open(home).read)
-  links = doc.search("ul.serialise_list li a").collect() do |anchor|
+  sp_list, normal_list = doc.search("ul.serialise_list")
+  
+  sp_list_links = sp_list.search("li a").collect() do |anchor|
+    comic_url = anchor["href"]
     {
       :name => anchor.innerText, 
-      :url => find_comic_list(anchor["href"])
+      :url => find_comic_list(comic_url)
     }
-  end.to_json
+  end
+  
+  normal_list_links = normal_list.search("li a").collect() do |anchor|
+    comic_url = anchor["href"]
+    {
+      :name => anchor.innerText, 
+      :url => find_comic_list(comic_url)
+    }
+  end
+  
+  {:sp => sp_list_links, :normal => normal_list_links}.to_json
 end
 
 # use comic id and episode id to find pages
