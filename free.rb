@@ -149,18 +149,19 @@ get "/:comic.json" do
   else
     normal_list_links = []
   end
-  
-  if lists.size > 0
-    sp_list_links = lists.pop.search("li a").collect() do |anchor|
-      comic_url = anchor["href"]
-      {
-        :name => anchor.innerText, 
-        :url => find_comic_list(comic_url)
-      }
-    end
-  else
-    sp_list_links = []
-  end
+
+  # SP is not supported
+  # if lists.size > 0
+  #   sp_list_links = lists.pop.search("li a").collect() do |anchor|
+  #     comic_url = anchor["href"]
+  #     {
+  #       :name => anchor.innerText, 
+  #       :url => find_comic_list(comic_url)
+  #     }
+  #   end
+  # else
+  #   sp_list_links = []
+  # end
   
   {:title => title, :cover => cover,
     :sp => sp_list_links, :normal => normal_list_links}.to_json
