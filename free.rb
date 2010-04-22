@@ -4,7 +4,8 @@ require 'open-uri'
 require 'json'
 require 'johnson'
 
-HOMEPAGE = "http://comic.sky-fire.com/"
+HOME_URL = "http://comic.sky-fire.com/"
+CATALOG_URL = "http://comic.sky-fire.com/Catalog/"
 
 helpers do
   def find_comic_home(name)
@@ -59,6 +60,18 @@ helpers do
       :url => "/#{comic_id}.json"
     }
   end
+  
+  def parse_catalog_link(link)
+    page_index = link.match(/PageIndex=([0-9]+)/)[1] rescue nil
+    topic_index = link.match(/tid=([0-9]+)/)[1] rescue nil
+    {:page_index => page_index, :topic_index => topic_index }
+  end
+  
+  def generate_local_catalog_link(options={})
+    page_index = options[:page_index] || "1"    # page 1
+    topic_index = options[:topic_index] || "-1" # all topic
+    "/catalog.json?pid=#{page_index}&tid=#{topic_index}"
+  end    
 end
 
 get '/' do
@@ -66,7 +79,7 @@ get '/' do
 end
 
 get '/index.json' do
-  doc = Hpricot(open(HOMEPAGE).read)
+  doc = Hpricot(open(HOME_URL).read)
   latest, anime, top = doc.search("table.gray_link1")
   
   latest_list = latest.search("td a img").each.collect do |thumb|
@@ -78,6 +91,30 @@ get '/index.json' do
   end
   
   {:top => top_list, :latest => latest_list}.to_json
+end
+
+get "/catalog.json" do
+  page_index = params[:pid] || "1"
+  topic_index = params[:tid] || "-1"
+  
+  doc = Hpricot(open(CATALOG_URL + "?PageIndex=#{page_index}&tid=#{topic_index}").read)
+  data = doc.search("ul.Comic_Pic_List").collect do |comic_block|
+    thumbnail, detail = comic_block.search("li")
+
+    thumbnail_url = thumbnail.search("img").attr("src")    
+    name = detail.search(".F14PX").inner_text.strip
+    url = detail.search("a").attr("href")  
+    comic_id = url.match(/\/HTML\/(.+)\//)[1] rescue nil
+
+    {:name => name, :comic_id => comic_id, :thumbnail => thumbnail_url, :url => "/#{comic_id}.json"}
+  end
+
+  current_page = doc.search(".pagebarCurrent").inner_text.to_i rescue 1
+  next_url = doc.search(".pagebarNext a").attr("href") rescue nil
+  next_param = parse_catalog_link(next_url)
+  next_url_local = generate_local_catalog_link(next_param)
+
+  {:list => data, :current_page => current_page, :next_url => next_url_local}.to_json
 end
 
 # use comic id to find episode list
@@ -105,6 +142,7 @@ get "/:comic.json" do
   
   {:sp => sp_list_links, :normal => normal_list_links}.to_json
 end
+
 
 # use comic id and episode id to find pages
 get "/:comic/:episode.json" do
