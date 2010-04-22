@@ -161,12 +161,14 @@ get "/all.json" do
     comic_title = detail.search(".F14PX").inner_text.strip
     url = detail.search("a").attr("href")  
     comic_alias = url.match(/\/HTML\/(.+)\//)[1] rescue nil
+    description = comic_block.inner_text.strip.split("\n").last.strip rescue nil
 
     {
       :comic_name => comic_title, 
       :comic_alias => comic_alias, 
-      :thumbnail => thumbnail_url, 
-      :url => "/#{comic_alias}.json"
+      :thumbnail => thumbnail_url,
+      :url => "/#{comic_alias}.json",
+      :description => description
     }
   end
 
