@@ -117,6 +117,10 @@ get "/catalog.json" do
   {:list => data, :current_page => current_page, :next_url => next_url_local}.to_json
 end
 
+get "/version.json" do
+  {:major => 1, :minor => 1, :text => "1.0"}.to_json
+end
+
 # use comic id to find episode list
 get "/:comic.json" do
   comic_id = params[:comic]
