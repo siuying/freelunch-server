@@ -160,7 +160,7 @@ get "/:comic.json" do
   #     }
   #   end
   # else
-  #   sp_list_links = []
+  sp_list_links = []
   # end
   
   {:title => title, :cover => cover,
