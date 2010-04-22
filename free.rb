@@ -164,7 +164,7 @@ get "/:comic.json" do
   # end
   
   {:title => title, :cover => cover,
-    :sp => sp_list_links, :normal => normal_list_links}.to_json
+    :sp => sp_list_links, :episodes => normal_list_links}.to_json
 end
 
 
