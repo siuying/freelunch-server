@@ -166,7 +166,7 @@ get "/all.json" do
       :comic_name => comic_title, 
       :comic_alias => comic_alias, 
       :thumbnail => thumbnail_url, 
-      :url => "/#{comic_id}.json"
+      :url => "/#{comic_alias}.json"
     }
   end
 
