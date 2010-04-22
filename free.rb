@@ -79,10 +79,10 @@ helpers do
     {:page_index => page_index, :topic_index => topic_index }
   end
   
-  def generate_local_catalog_link(options={})
+  def generate_local_all_comic_link(options={})
     page_index = options[:page_index] || "1"    # page 1
     topic_index = options[:topic_index] || "-1" # all topic
-    "/catalog.json?pid=#{page_index}&tid=#{topic_index}"
+    "/all.json?pid=#{page_index}&tid=#{topic_index}"
   end
   
   def get_episode_pages(domain, comic_id, episode_id, topic_id=nil)
@@ -116,6 +116,7 @@ get '/' do
   "No free lunch!"
 end
 
+# List top/latest comics
 get '/index.json' do
   doc = Hpricot(open(HOME_URL).read)
   latest, anime, top = doc.search("table.gray_link1")
@@ -131,11 +132,28 @@ get '/index.json' do
   {:top => top_list, :latest => latest_list}.to_json
 end
 
-get "/catalog.json" do
-  page_index = params[:pid] || "1"
-  topic_index = params[:tid] || "-1"
-  
-  doc = Hpricot(open(CATALOG_URL + "?PageIndex=#{page_index}&tid=#{topic_index}").read)
+# List categories
+get "/category.json" do
+  doc = Hpricot(open(CATALOG_URL).read)
+  data = doc.search("//div/ul/li").collect do |li|
+    list_id = li["id"].split("_")[1] rescue -1
+    list_name = li.inner_text.strip
+    {
+      :id => list_id, 
+      :list_name => list_name,
+      :url => "/all.json?tid=#{list_id}"
+    }
+  end
+  data.to_json
+end
+
+# browse all comics, based on category and letter
+get "/all.json" do
+  offset = params[:pid] || "1"
+  category = params[:tid] || "-1"
+  letter = params[:letter] || "*"
+
+  doc = Hpricot(open(CATALOG_URL + "?PageIndex=#{offset}&tid=#{category}&l=#{letter}").read)
   data = doc.search("ul.Comic_Pic_List").collect do |comic_block|
     thumbnail, detail = comic_block.search("li")
 
@@ -155,13 +173,14 @@ get "/catalog.json" do
   current_page = doc.search(".pagebarCurrent").inner_text.to_i rescue 1
   next_url = doc.search(".pagebarNext a").attr("href") rescue nil
   next_param = parse_catalog_link(next_url)
-  next_url_local = generate_local_catalog_link(next_param)
+  next_url_local = generate_local_all_comic_link(next_param)
 
   {:list => data, :current_page => current_page, :next_url => next_url_local}.to_json
 end
 
+# return app version
 get "/version.json" do
-  {:major => 1, :minor => 1, :text => "1.0"}.to_json
+  {:major => 1, :minor => 3, :text => "0.3"}.to_json
 end
 
 # use comic id to find episode list
