@@ -125,7 +125,7 @@ get '/index.json' do
     list_comic_episodes_by_thumbnail(thumb)
   end
     
-  top_list = top.search("td a img").each.collect do |thumb|
+  top_list = top.search("td a img").collect do |thumb|
     list_comic_episodes_by_thumbnail(thumb)
   end
   
