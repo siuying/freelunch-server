@@ -48,6 +48,11 @@ helpers do
     end
   end
   
+  def convert_comic_page(fromUrl)
+    domain, comic_id, episode_id, topic_id = parse_comic_page_link(fromUrl)
+    generate_local_comic_page_link(domain, comic_id, episode_id, topic_id)
+  end
+  
   def find_episode_list(episode_js)
     doc = open(episode_js).read + ";picAy"
     Johnson.evaluate(doc).to_a
@@ -83,13 +88,26 @@ helpers do
   def get_episode_pages(domain, comic_id, episode_id, topic_id=nil)
     if topic_id
       url = "http://#{domain}/Utility/#{comic_id}/#{topic_id}/#{episode_id}.js"
-      
     else
       url = "http://#{domain}/Utility/#{comic_id}/#{episode_id}.js"
-
     end
     
-    {:comic => comic_id, :episode => episode_id, :pages => find_episode_list(url)}
+    johnson = Johnson::Runtime.new
+    js = open(url).read
+    johnson.evaluate(js)
+
+    pages = johnson["picAy"].to_a
+    pageCount = johnson["picCount"]
+    nextVolume = johnson["nextVolume"]
+    preVolume = johnson["preVolume"]
+
+    nextVolume = (nextVolume =~ /javascript/) ? nil : convert_comic_page(nextVolume)
+    preVolume = (preVolume =~ /javascript/) ? nil : convert_comic_page(preVolume)    
+                
+    {
+      :comic => comic_id, :episode => episode_id, :pages => pages, 
+      :pageCount => pageCount, :preVolume => preVolume, :nextVolume => nextVolume
+    }
   end
 end
 
