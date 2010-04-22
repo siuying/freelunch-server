@@ -174,8 +174,11 @@ get "/all.json" do
 
   current_page = doc.search(".pagebarCurrent").inner_text.to_i rescue 1
   next_url = doc.search(".pagebarNext a").attr("href") rescue nil
-  next_param = parse_catalog_link(next_url)
-  next_url_local = generate_local_all_comic_link(next_param)
+  
+  if next_url
+    next_param = parse_catalog_link(next_url)
+    next_url_local = generate_local_all_comic_link(next_param)
+  end
 
   {:list => data, :current_page => current_page, :next_url => next_url_local}.to_json
 end
